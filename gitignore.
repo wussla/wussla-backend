@@ -1,0 +1,2 @@
+shell
+ node_modules/ .env .env.local
