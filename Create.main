@@ -1,0 +1,1080 @@
+const ComponentFunction = function() {
+  // @section:imports @depends:[]
+  const React = require('react');
+  const { useState, useEffect, useContext, useMemo, useCallback } = React;
+  const { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Platform, StatusBar, ActivityIndicator, KeyboardAvoidingView, FlatList } = require('react-native');
+  const { MaterialIcons } = require('@expo/vector-icons');
+  const { createBottomTabNavigator } = require('@react-navigation/bottom-tabs');
+  // @end:imports
+
+  // @section:theme @depends:[]
+  const storageStrategy = 'local';
+  const primaryColor = '#FF6B35';
+  const accentColor = '#FFB800';
+  const backgroundColor = '#F8FAFC';
+  const cardColor = '#FFFFFF';
+  const textPrimary = '#1F2937';
+  const textSecondary = '#6B7280';
+  const designStyle = 'modern';
+  // @end:theme
+
+  // @section:navigation-setup @depends:[]
+  const Tab = createBottomTabNavigator();
+  // @end:navigation-setup
+
+  // @section:ThemeContext @depends:[theme]
+  const ThemeContext = React.createContext();
+  const ThemeProvider = function(props) {
+    const darkModeState = useState(false);
+    const darkMode = darkModeState[0];
+    const setDarkMode = darkModeState[1];
+    
+    const lightTheme = useMemo(function() {
+      return {
+        colors: {
+          primary: primaryColor,
+          accent: accentColor,
+          background: backgroundColor,
+          card: cardColor,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
+          border: '#E5E7EB',
+          success: '#10B981',
+          error: '#EF4444',
+          warning: '#F59E0B'
+        }
+      };
+    }, []);
+    
+    const darkTheme = useMemo(function() {
+      return {
+        colors: {
+          primary: primaryColor,
+          accent: accentColor,
+          background: '#1F2937',
+          card: '#374151',
+          textPrimary: '#F9FAFB',
+          textSecondary: '#D1D5DB',
+          border: '#4B5563',
+          success: '#10B981',
+          error: '#EF4444',
+          warning: '#F59E0B'
+        }
+      };
+    }, []);
+    
+    const theme = darkMode ? darkTheme : lightTheme;
+    
+    const toggleDarkMode = useCallback(function() {
+      setDarkMode(function(prev) { return !prev; });
+    }, []);
+    
+    const value = useMemo(function() {
+      return { 
+        theme: theme, 
+        darkMode: darkMode, 
+        toggleDarkMode: toggleDarkMode, 
+        designStyle: designStyle 
+      };
+    }, [theme, darkMode, toggleDarkMode]);
+    
+    return React.createElement(ThemeContext.Provider, { value: value }, props.children);
+  };
+  
+  const useTheme = function() { 
+    return useContext(ThemeContext); 
+  };
+  // @end:ThemeContext
+
+  // @section:RoleSelectionScreen-state @depends:[ThemeContext]
+  const useRoleSelectionState = function() {
+    const themeContext = useTheme();
+    const theme = themeContext.theme;
+    const userRoleState = useState(null);
+    const userRole = userRoleState[0];
+    const setUserRole = userRoleState[1];
+    return { theme: theme, userRole: userRole, setUserRole: setUserRole };
+  };
+  // @end:RoleSelectionScreen-state
+
+  // @section:RoleSelectionScreen @depends:[RoleSelectionScreen-state,styles]
+  const RoleSelectionScreen = function() {
+    const state = useRoleSelectionState();
+    
+    const selectRole = function(role) {
+      state.setUserRole(role);
+    };
+    
+    const roleOptions = [
+      { id: 'customer', title: 'Customer', subtitle: 'Order from merchants', icon: 'shopping-cart' },
+      { id: 'merchant', title: 'Merchant', subtitle: 'Manage your business', icon: 'store' },
+      { id: 'driver', title: 'Driver', subtitle: 'Deliver orders', icon: 'delivery-dining' }
+    ];
+    
+    return React.createElement(View, { 
+      style: [styles.container, { backgroundColor: state.theme.colors.background }], 
+      componentId: 'role-selection-screen' 
+    },
+      React.createElement(View, { style: styles.header, componentId: 'role-selection-header' },
+        React.createElement(Text, { 
+          style: [styles.title, { color: state.theme.colors.textPrimary }], 
+          componentId: 'role-selection-title' 
+        }, 'Welcome to Wussla'),
+        React.createElement(Text, { 
+          style: [styles.subtitle, { color: state.theme.colors.textSecondary }], 
+          componentId: 'role-selection-subtitle' 
+        }, 'Choose your role to continue')
+      ),
+      React.createElement(View, { style: styles.roleContainer, componentId: 'role-options-container' },
+        roleOptions.map(function(role, index) {
+          return React.createElement(TouchableOpacity, {
+            key: role.id,
+            style: [styles.roleCard, { backgroundColor: state.theme.colors.card }],
+            onPress: function() { selectRole(role.id); },
+            componentId: 'role-card-' + role.id
+          },
+            React.createElement(MaterialIcons, { 
+              name: role.icon, 
+              size: 48, 
+              color: state.theme.colors.primary,
+              componentId: 'role-icon-' + role.id
+            }),
+            React.createElement(Text, { 
+              style: [styles.roleTitle, { color: state.theme.colors.textPrimary }], 
+              componentId: 'role-title-' + role.id 
+            }, role.title),
+            React.createElement(Text, { 
+              style: [styles.roleSubtitle, { color: state.theme.colors.textSecondary }], 
+              componentId: 'role-subtitle-' + role.id 
+            }, role.subtitle)
+          );
+        })
+      )
+    );
+  };
+  // @end:RoleSelectionScreen
+
+  // @section:CustomerDashboard-state @depends:[ThemeContext]
+  const useCustomerDashboardState = function() {
+    const themeContext = useTheme();
+    const theme = themeContext.theme;
+    const ordersState = useState([
+      { id: '1', merchant: 'Pizza Palace', status: 'delivered', total: 250 },
+      { id: '2', merchant: 'Burger House', status: 'out_for_delivery', total: 180 }
+    ]);
+    const orders = ordersState[0];
+    const setOrders = ordersState[1];
+    const merchantsState = useState([
+      { id: '1', name: 'Pizza Palace', category: 'Fast Food', rating: 4.5, deliveryTime: '25-35 min' },
+      { id: '2', name: 'Burger House', category: 'Burgers', rating: 4.2, deliveryTime: '30-40 min' },
+      { id: '3', name: 'Fresh Salads', category: 'Healthy', rating: 4.8, deliveryTime: '20-30 min' }
+    ]);
+    const merchants = merchantsState[0];
+    const setMerchants = merchantsState[1];
+    return { theme: theme, orders: orders, setOrders: setOrders, merchants: merchants, setMerchants: setMerchants };
+  };
+  // @end:CustomerDashboard-state
+
+  // @section:CustomerDashboard @depends:[CustomerDashboard-state,styles]
+  const CustomerDashboard = function() {
+    const state = useCustomerDashboardState();
+    
+    const getStatusColor = function(status) {
+      switch(status) {
+        case 'delivered': return state.theme.colors.success;
+        case 'out_for_delivery': return state.theme.colors.warning;
+        case 'preparing': return state.theme.colors.accent;
+        default: return state.theme.colors.textSecondary;
+      }
+    };
+    
+    const getStatusText = function(status) {
+      switch(status) {
+        case 'delivered': return 'Delivered';
+        case 'out_for_delivery': return 'Out for Delivery';
+        case 'preparing': return 'Preparing';
+        default: return 'Unknown';
+      }
+    };
+    
+    return React.createElement(ScrollView, { 
+      style: [styles.container, { backgroundColor: state.theme.colors.background }],
+      contentContainerStyle: { paddingBottom: Platform.OS === 'web' ? 90 : 100 },
+      componentId: 'customer-dashboard-scroll'
+    },
+      React.createElement(View, { style: styles.dashboardHeader, componentId: 'customer-header' },
+        React.createElement(Text, { 
+          style: [styles.dashboardTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'customer-title' 
+        }, 'Welcome Back!'),
+        React.createElement(Text, { 
+          style: [styles.dashboardSubtitle, { color: state.theme.colors.textSecondary }], 
+          componentId: 'customer-subtitle' 
+        }, 'What would you like to order today?')
+      ),
+      
+      React.createElement(View, { style: styles.section, componentId: 'active-orders-section' },
+        React.createElement(Text, { 
+          style: [styles.sectionTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'active-orders-title' 
+        }, 'Active Orders'),
+        state.orders.filter(function(order) { return order.status !== 'delivered'; }).map(function(order, index) {
+          return React.createElement(View, {
+            key: order.id,
+            style: [styles.orderCard, { backgroundColor: state.theme.colors.card }],
+            componentId: 'order-card-' + order.id
+          },
+            React.createElement(View, { style: styles.orderHeader, componentId: 'order-header-' + order.id },
+              React.createElement(Text, { 
+                style: [styles.orderMerchant, { color: state.theme.colors.textPrimary }], 
+                componentId: 'order-merchant-' + order.id 
+              }, order.merchant),
+              React.createElement(View, { 
+                style: [styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }], 
+                componentId: 'status-badge-' + order.id 
+              },
+                React.createElement(Text, { 
+                  style: [styles.statusText, { color: getStatusColor(order.status) }], 
+                  componentId: 'status-text-' + order.id 
+                }, getStatusText(order.status))
+              )
+            ),
+            React.createElement(Text, { 
+              style: [styles.orderTotal, { color: state.theme.colors.textSecondary }], 
+              componentId: 'order-total-' + order.id 
+            }, order.total + ' YER'),
+            React.createElement(TouchableOpacity, {
+              style: [styles.trackButton, { backgroundColor: state.theme.colors.primary }],
+              onPress: function() {
+                Platform.OS === 'web' ? window.alert('Tracking order from ' + order.merchant) : Alert.alert('Track Order', 'Tracking order from ' + order.merchant);
+              },
+              componentId: 'track-button-' + order.id
+            },
+              React.createElement(Text, { 
+                style: styles.trackButtonText, 
+                componentId: 'track-button-text-' + order.id 
+              }, 'Track Order')
+            )
+          );
+        })
+      ),
+      
+      React.createElement(View, { style: styles.section, componentId: 'merchants-section' },
+        React.createElement(Text, { 
+          style: [styles.sectionTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'merchants-title' 
+        }, 'Popular Merchants'),
+        state.merchants.map(function(merchant, index) {
+          return React.createElement(TouchableOpacity, {
+            key: merchant.id,
+            style: [styles.merchantCard, { backgroundColor: state.theme.colors.card }],
+            onPress: function() {
+              Platform.OS === 'web' ? window.alert('Opening ' + merchant.name + ' menu') : Alert.alert('Menu', 'Opening ' + merchant.name + ' menu');
+            },
+            componentId: 'merchant-card-' + merchant.id
+          },
+            React.createElement(View, { style: styles.merchantInfo, componentId: 'merchant-info-' + merchant.id },
+              React.createElement(Text, { 
+                style: [styles.merchantName, { color: state.theme.colors.textPrimary }], 
+                componentId: 'merchant-name-' + merchant.id 
+              }, merchant.name),
+              React.createElement(Text, { 
+                style: [styles.merchantCategory, { color: state.theme.colors.textSecondary }], 
+                componentId: 'merchant-category-' + merchant.id 
+              }, merchant.category),
+              React.createElement(View, { style: styles.merchantMeta, componentId: 'merchant-meta-' + merchant.id },
+                React.createElement(MaterialIcons, { 
+                  name: 'star', 
+                  size: 16, 
+                  color: state.theme.colors.warning,
+                  componentId: 'merchant-star-' + merchant.id
+                }),
+                React.createElement(Text, { 
+                  style: [styles.merchantRating, { color: state.theme.colors.textSecondary }], 
+                  componentId: 'merchant-rating-' + merchant.id 
+                }, merchant.rating + ' • ' + merchant.deliveryTime)
+              )
+            )
+          );
+        })
+      )
+    );
+  };
+  // @end:CustomerDashboard
+
+  // @section:MerchantDashboard-state @depends:[ThemeContext]
+  const useMerchantDashboardState = function() {
+    const themeContext = useTheme();
+    const theme = themeContext.theme;
+    const pendingOrdersState = useState([
+      { id: '1', customer: 'Ahmed Ali', items: 'Large Pizza, Coke', total: 250, time: '5 min ago' },
+      { id: '2', customer: 'Sara Mohammed', items: 'Burger Combo', total: 180, time: '10 min ago' }
+    ]);
+    const pendingOrders = pendingOrdersState[0];
+    const setPendingOrders = pendingOrdersState[1];
+    const statsState = useState({
+      todayOrders: 24,
+      todayRevenue: 4500,
+      avgOrderValue: 185
+    });
+    const stats = statsState[0];
+    const setStats = statsState[1];
+    return { theme: theme, pendingOrders: pendingOrders, setPendingOrders: setPendingOrders, stats: stats, setStats: setStats };
+  };
+  // @end:MerchantDashboard-state
+
+  // @section:MerchantDashboard @depends:[MerchantDashboard-state,styles]
+  const MerchantDashboard = function() {
+    const state = useMerchantDashboardState();
+    
+    const handleOrderAction = function(orderId, action) {
+      const actionText = action === 'accept' ? 'accepted' : 'rejected';
+      Platform.OS === 'web' ? window.alert('Order ' + orderId + ' ' + actionText) : Alert.alert('Order Update', 'Order ' + orderId + ' ' + actionText);
+      
+      if (action === 'accept' || action === 'reject') {
+        state.setPendingOrders(function(prev) {
+          return prev.filter(function(order) { return order.id !== orderId; });
+        });
+      }
+    };
+    
+    const statCards = [
+      { title: 'Today Orders', value: state.stats.todayOrders, icon: 'receipt' },
+      { title: 'Revenue', value: state.stats.todayRevenue + ' YER', icon: 'monetization-on' },
+      { title: 'Avg Order', value: state.stats.avgOrderValue + ' YER', icon: 'analytics' }
+    ];
+    
+    return React.createElement(ScrollView, { 
+      style: [styles.container, { backgroundColor: state.theme.colors.background }],
+      contentContainerStyle: { paddingBottom: Platform.OS === 'web' ? 90 : 100 },
+      componentId: 'merchant-dashboard-scroll'
+    },
+      React.createElement(View, { style: styles.dashboardHeader, componentId: 'merchant-header' },
+        React.createElement(Text, { 
+          style: [styles.dashboardTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'merchant-title' 
+        }, 'Merchant Dashboard'),
+        React.createElement(Text, { 
+          style: [styles.dashboardSubtitle, { color: state.theme.colors.textSecondary }], 
+          componentId: 'merchant-subtitle' 
+        }, 'Manage your orders and business')
+      ),
+      
+      React.createElement(View, { style: styles.statsContainer, componentId: 'merchant-stats' },
+        statCards.map(function(stat, index) {
+          return React.createElement(View, {
+            key: index,
+            style: [styles.statCard, { backgroundColor: state.theme.colors.card }],
+            componentId: 'stat-card-' + index
+          },
+            React.createElement(MaterialIcons, { 
+              name: stat.icon, 
+              size: 24, 
+              color: state.theme.colors.primary,
+              componentId: 'stat-icon-' + index
+            }),
+            React.createElement(Text, { 
+              style: [styles.statValue, { color: state.theme.colors.textPrimary }], 
+              componentId: 'stat-value-' + index 
+            }, stat.value),
+            React.createElement(Text, { 
+              style: [styles.statTitle, { color: state.theme.colors.textSecondary }], 
+              componentId: 'stat-title-' + index 
+            }, stat.title)
+          );
+        })
+      ),
+      
+      React.createElement(View, { style: styles.section, componentId: 'pending-orders-section' },
+        React.createElement(Text, { 
+          style: [styles.sectionTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'pending-orders-title' 
+        }, 'Pending Orders'),
+        state.pendingOrders.length === 0 ? 
+          React.createElement(View, { 
+            style: [styles.emptyState, { backgroundColor: state.theme.colors.card }], 
+            componentId: 'empty-orders' 
+          },
+            React.createElement(MaterialIcons, { 
+              name: 'inbox', 
+              size: 48, 
+              color: state.theme.colors.textSecondary,
+              componentId: 'empty-icon'
+            }),
+            React.createElement(Text, { 
+              style: [styles.emptyText, { color: state.theme.colors.textSecondary }], 
+              componentId: 'empty-text' 
+            }, 'No pending orders')
+          ) :
+          state.pendingOrders.map(function(order, index) {
+            return React.createElement(View, {
+              key: order.id,
+              style: [styles.orderCard, { backgroundColor: state.theme.colors.card }],
+              componentId: 'pending-order-' + order.id
+            },
+              React.createElement(View, { style: styles.orderInfo, componentId: 'order-info-' + order.id },
+                React.createElement(Text, { 
+                  style: [styles.customerName, { color: state.theme.colors.textPrimary }], 
+                  componentId: 'customer-name-' + order.id 
+                }, order.customer),
+                React.createElement(Text, { 
+                  style: [styles.orderItems, { color: state.theme.colors.textSecondary }], 
+                  componentId: 'order-items-' + order.id 
+                }, order.items),
+                React.createElement(View, { style: styles.orderMeta, componentId: 'order-meta-' + order.id },
+                  React.createElement(Text, { 
+                    style: [styles.orderTotal, { color: state.theme.colors.primary }], 
+                    componentId: 'order-total-' + order.id 
+                  }, order.total + ' YER'),
+                  React.createElement(Text, { 
+                    style: [styles.orderTime, { color: state.theme.colors.textSecondary }], 
+                    componentId: 'order-time-' + order.id 
+                  }, order.time)
+                )
+              ),
+              React.createElement(View, { style: styles.orderActions, componentId: 'order-actions-' + order.id },
+                React.createElement(TouchableOpacity, {
+                  style: [styles.actionButton, styles.rejectButton],
+                  onPress: function() { handleOrderAction(order.id, 'reject'); },
+                  componentId: 'reject-button-' + order.id
+                },
+                  React.createElement(Text, { 
+                    style: styles.rejectButtonText, 
+                    componentId: 'reject-text-' + order.id 
+                  }, 'Reject')
+                ),
+                React.createElement(TouchableOpacity, {
+                  style: [styles.actionButton, styles.acceptButton, { backgroundColor: state.theme.colors.primary }],
+                  onPress: function() { handleOrderAction(order.id, 'accept'); },
+                  componentId: 'accept-button-' + order.id
+                },
+                  React.createElement(Text, { 
+                    style: styles.acceptButtonText, 
+                    componentId: 'accept-text-' + order.id 
+                  }, 'Accept')
+                )
+              )
+            );
+          })
+      )
+    );
+  };
+  // @end:MerchantDashboard
+
+  // @section:DriverDashboard-state @depends:[ThemeContext]
+  const useDriverDashboardState = function() {
+    const themeContext = useTheme();
+    const theme = themeContext.theme;
+    const availableDeliveriesState = useState([
+      { id: '1', merchant: 'Pizza Palace', customer: 'Ahmed Ali', distance: '2.5 km', payout: 25, pickup: 'Downtown' },
+      { id: '2', merchant: 'Burger House', customer: 'Sara Mohammed', distance: '1.8 km', payout: 20, pickup: 'Mall Area' }
+    ]);
+    const availableDeliveries = availableDeliveriesState[0];
+    const setAvailableDeliveries = availableDeliveriesState[1];
+    const isOnlineState = useState(false);
+    const isOnline = isOnlineState[0];
+    const setIsOnline = isOnlineState[1];
+    const todayEarningsState = useState(180);
+    const todayEarnings = todayEarningsState[0];
+    const setTodayEarnings = todayEarningsState[1];
+    return { theme: theme, availableDeliveries: availableDeliveries, setAvailableDeliveries: setAvailableDeliveries, isOnline: isOnline, setIsOnline: setIsOnline, todayEarnings: todayEarnings, setTodayEarnings: setTodayEarnings };
+  };
+  // @end:DriverDashboard-state
+
+  // @section:DriverDashboard @depends:[DriverDashboard-state,styles]
+  const DriverDashboard = function() {
+    const state = useDriverDashboardState();
+    
+    const toggleOnlineStatus = function() {
+      state.setIsOnline(function(prev) { return !prev; });
+      const statusText = !state.isOnline ? 'online' : 'offline';
+      Platform.OS === 'web' ? window.alert('You are now ' + statusText) : Alert.alert('Status Update', 'You are now ' + statusText);
+    };
+    
+    const acceptDelivery = function(deliveryId) {
+      Platform.OS === 'web' ? window.alert('Delivery ' + deliveryId + ' accepted') : Alert.alert('Delivery Accepted', 'Navigate to pickup location');
+      state.setAvailableDeliveries(function(prev) {
+        return prev.filter(function(delivery) { return delivery.id !== deliveryId; });
+      });
+    };
+    
+    return React.createElement(ScrollView, { 
+      style: [styles.container, { backgroundColor: state.theme.colors.background }],
+      contentContainerStyle: { paddingBottom: Platform.OS === 'web' ? 90 : 100 },
+      componentId: 'driver-dashboard-scroll'
+    },
+      React.createElement(View, { style: styles.dashboardHeader, componentId: 'driver-header' },
+        React.createElement(Text, { 
+          style: [styles.dashboardTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'driver-title' 
+        }, 'Driver Dashboard'),
+        React.createElement(Text, { 
+          style: [styles.dashboardSubtitle, { color: state.theme.colors.textSecondary }], 
+          componentId: 'driver-subtitle' 
+        }, 'Manage your deliveries')
+      ),
+      
+      React.createElement(View, { style: styles.driverStatusCard, componentId: 'driver-status' },
+        React.createElement(View, { 
+          style: [styles.statusCard, { backgroundColor: state.theme.colors.card }], 
+          componentId: 'status-card' 
+        },
+          React.createElement(View, { style: styles.statusInfo, componentId: 'status-info' },
+            React.createElement(Text, { 
+              style: [styles.statusLabel, { color: state.theme.colors.textSecondary }], 
+              componentId: 'status-label' 
+            }, 'Status'),
+            React.createElement(View, { style: styles.statusRow, componentId: 'status-row' },
+              React.createElement(View, { 
+                style: [styles.statusIndicator, { 
+                  backgroundColor: state.isOnline ? state.theme.colors.success : state.theme.colors.error 
+                }], 
+                componentId: 'status-indicator' 
+              }),
+              React.createElement(Text, { 
+                style: [styles.statusText, { color: state.theme.colors.textPrimary }], 
+                componentId: 'status-text' 
+              }, state.isOnline ? 'Online' : 'Offline')
+            ),
+            React.createElement(Text, { 
+              style: [styles.earningsText, { color: state.theme.colors.primary }], 
+              componentId: 'earnings-text' 
+            }, 'Today: ' + state.todayEarnings + ' YER')
+          ),
+          React.createElement(TouchableOpacity, {
+            style: [styles.toggleButton, { 
+              backgroundColor: state.isOnline ? state.theme.colors.error : state.theme.colors.success 
+            }],
+            onPress: toggleOnlineStatus,
+            componentId: 'toggle-status-button'
+          },
+            React.createElement(Text, { 
+              style: styles.toggleButtonText, 
+              componentId: 'toggle-button-text' 
+            }, state.isOnline ? 'Go Offline' : 'Go Online')
+          )
+        )
+      ),
+      
+      React.createElement(View, { style: styles.section, componentId: 'available-deliveries-section' },
+        React.createElement(Text, { 
+          style: [styles.sectionTitle, { color: state.theme.colors.textPrimary }], 
+          componentId: 'available-deliveries-title' 
+        }, 'Available Deliveries'),
+        !state.isOnline ? 
+          React.createElement(View, { 
+            style: [styles.offlineMessage, { backgroundColor: state.theme.colors.card }], 
+            componentId: 'offline-message' 
+          },
+            React.createElement(MaterialIcons, { 
+              name: 'wifi-off', 
+              size: 48, 
+              color: state.theme.colors.textSecondary,
+              componentId: 'offline-icon'
+            }),
+            React.createElement(Text, { 
+              style: [styles.offlineText, { color: state.theme.colors.textSecondary }], 
+              componentId: 'offline-text' 
+            }, 'Go online to see available deliveries')
+          ) :
+          state.availableDeliveries.length === 0 ? 
+            React.createElement(View, { 
+              style: [styles.emptyState, { backgroundColor: state.theme.colors.card }], 
+              componentId: 'empty-deliveries' 
+            },
+              React.createElement(MaterialIcons, { 
+                name: 'local-shipping', 
+                size: 48, 
+                color: state.theme.colors.textSecondary,
+                componentId: 'empty-delivery-icon'
+              }),
+              React.createElement(Text, { 
+                style: [styles.emptyText, { color: state.theme.colors.textSecondary }], 
+                componentId: 'empty-delivery-text' 
+              }, 'No deliveries available')
+            ) :
+            state.availableDeliveries.map(function(delivery, index) {
+              return React.createElement(View, {
+                key: delivery.id,
+                style: [styles.deliveryCard, { backgroundColor: state.theme.colors.card }],
+                componentId: 'delivery-card-' + delivery.id
+              },
+                React.createElement(View, { style: styles.deliveryInfo, componentId: 'delivery-info-' + delivery.id },
+                  React.createElement(Text, { 
+                    style: [styles.deliveryMerchant, { color: state.theme.colors.textPrimary }], 
+                    componentId: 'delivery-merchant-' + delivery.id 
+                  }, delivery.merchant),
+                  React.createElement(Text, { 
+                    style: [styles.deliveryCustomer, { color: state.theme.colors.textSecondary }], 
+                    componentId: 'delivery-customer-' + delivery.id 
+                  }, 'To: ' + delivery.customer),
+                  React.createElement(View, { style: styles.deliveryMeta, componentId: 'delivery-meta-' + delivery.id },
+                    React.createElement(View, { style: styles.metaItem, componentId: 'distance-meta-' + delivery.id },
+                      React.createElement(MaterialIcons, { 
+                        name: 'location-on', 
+                        size: 16, 
+                        color: state.theme.colors.textSecondary,
+                        componentId: 'distance-icon-' + delivery.id
+                      }),
+                      React.createElement(Text, { 
+                        style: [styles.metaText, { color: state.theme.colors.textSecondary }], 
+                        componentId: 'distance-text-' + delivery.id 
+                      }, delivery.distance)
+                    ),
+                    React.createElement(View, { style: styles.metaItem, componentId: 'payout-meta-' + delivery.id },
+                      React.createElement(MaterialIcons, { 
+                        name: 'monetization-on', 
+                        size: 16, 
+                        color: state.theme.colors.success,
+                        componentId: 'payout-icon-' + delivery.id
+                      }),
+                      React.createElement(Text, { 
+                        style: [styles.metaText, { color: state.theme.colors.success }], 
+                        componentId: 'payout-text-' + delivery.id 
+                      }, delivery.payout + ' YER')
+                    )
+                  )
+                ),
+                React.createElement(TouchableOpacity, {
+                  style: [styles.acceptDeliveryButton, { backgroundColor: state.theme.colors.primary }],
+                  onPress: function() { acceptDelivery(delivery.id); },
+                  componentId: 'accept-delivery-' + delivery.id
+                },
+                  React.createElement(Text, { 
+                    style: styles.acceptDeliveryText, 
+                    componentId: 'accept-delivery-text-' + delivery.id 
+                  }, 'Accept')
+                )
+              );
+            })
+      )
+    );
+  };
+  // @end:DriverDashboard
+
+  // @section:MainApp-state @depends:[ThemeContext]
+  const useMainAppState = function() {
+    const themeContext = useTheme();
+    const theme = themeContext.theme;
+    const userRoleState = useState(null);
+    const userRole = userRoleState[0];
+    const setUserRole = userRoleState[1];
+    return { theme: theme, userRole: userRole, setUserRole: setUserRole };
+  };
+  // @end:MainApp-state
+
+  // @section:MainApp @depends:[MainApp-state,RoleSelectionScreen,CustomerDashboard,MerchantDashboard,DriverDashboard,styles]
+  const MainApp = function() {
+    const state = useMainAppState();
+    
+    if (!state.userRole) {
+      return React.createElement(RoleSelectionScreen, { onRoleSelect: state.setUserRole });
+    }
+    
+    const getDashboardComponent = function() {
+      switch(state.userRole) {
+        case 'customer': return CustomerDashboard;
+        case 'merchant': return MerchantDashboard;
+        case 'driver': return DriverDashboard;
+        default: return CustomerDashboard;
+      }
+    };
+    
+    const DashboardComponent = getDashboardComponent();
+    
+    return React.createElement(View, { 
+      style: [styles.appContainer, { backgroundColor: state.theme.colors.background }], 
+      componentId: 'main-app-container' 
+    },
+      React.createElement(View, { style: styles.appHeader, componentId: 'main-app-header' },
+        React.createElement(TouchableOpacity, {
+          style: styles.backButton,
+          onPress: function() { state.setUserRole(null); },
+          componentId: 'back-to-roles-button'
+        },
+          React.createElement(MaterialIcons, { 
+            name: 'arrow-back', 
+            size: 24, 
+            color: state.theme.colors.textPrimary,
+            componentId: 'back-icon'
+          })
+        ),
+        React.createElement(Text, { 
+          style: [styles.appTitle, { color: state.theme.colors.primary }], 
+          componentId: 'main-app-title' 
+        }, 'Wussla')
+      ),
+      React.createElement(DashboardComponent)
+    );
+  };
+  // @end:MainApp
+
+  // @section:styles @depends:[theme]
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      width: '100%'
+    },
+    appContainer: {
+      flex: 1,
+      width: '100%',
+      height: '100%'
+    },
+    appHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      paddingTop: Platform.OS === 'ios' ? 50 : 20,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E7EB'
+    },
+    backButton: {
+      marginRight: 16,
+      padding: 8
+    },
+    appTitle: {
+      fontSize: 24,
+      fontWeight: 'bold'
+    },
+    header: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 20
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      marginBottom: 8
+    },
+    subtitle: {
+      fontSize: 16,
+      textAlign: 'center'
+    },
+    roleContainer: {
+      paddingHorizontal: 20,
+      gap: 16
+    },
+    roleCard: {
+      padding: 24,
+      borderRadius: 16,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4
+    },
+    roleTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginTop: 16,
+      marginBottom: 8
+    },
+    roleSubtitle: {
+      fontSize: 14,
+      textAlign: 'center'
+    },
+    dashboardHeader: {
+      paddingHorizontal: 20,
+      paddingVertical: 20
+    },
+    dashboardTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      marginBottom: 8
+    },
+    dashboardSubtitle: {
+      fontSize: 16
+    },
+    section: {
+      paddingHorizontal: 20,
+      marginBottom: 24
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginBottom: 16
+    },
+    orderCard: {
+      padding: 20,
+      borderRadius: 12,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    orderHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12
+    },
+    orderMerchant: {
+      fontSize: 18,
+      fontWeight: 'bold'
+    },
+    statusBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      textTransform: 'uppercase'
+    },
+    orderTotal: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 16
+    },
+    trackButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    trackButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold'
+    },
+    merchantCard: {
+      padding: 20,
+      borderRadius: 12,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    merchantInfo: {
+      gap: 8
+    },
+    merchantName: {
+      fontSize: 18,
+      fontWeight: 'bold'
+    },
+    merchantCategory: {
+      fontSize: 14
+    },
+    merchantMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4
+    },
+    merchantRating: {
+      fontSize: 14,
+      marginLeft: 4
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      gap: 16,
+      marginBottom: 24
+    },
+    statCard: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    statValue: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginTop: 8,
+      marginBottom: 4
+    },
+    statTitle: {
+      fontSize: 12,
+      textAlign: 'center'
+    },
+    orderInfo: {
+      flex: 1
+    },
+    customerName: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 8
+    },
+    orderItems: {
+      fontSize: 14,
+      marginBottom: 12
+    },
+    orderMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16
+    },
+    orderTime: {
+      fontSize: 12
+    },
+    orderActions: {
+      flexDirection: 'row',
+      gap: 12
+    },
+    actionButton: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    rejectButton: {
+      backgroundColor: '#FEF2F2',
+      borderWidth: 1,
+      borderColor: '#FCA5A5'
+    },
+    acceptButton: {
+    },
+    rejectButtonText: {
+      color: '#DC2626',
+      fontWeight: 'bold'
+    },
+    acceptButtonText: {
+      color: '#FFFFFF',
+      fontWeight: 'bold'
+    },
+    emptyState: {
+      padding: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    emptyText: {
+      fontSize: 16,
+      marginTop: 16,
+      textAlign: 'center'
+    },
+    driverStatusCard: {
+      paddingHorizontal: 20,
+      marginBottom: 24
+    },
+    statusCard: {
+      padding: 20,
+      borderRadius: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    statusInfo: {
+      marginBottom: 16
+    },
+    statusLabel: {
+      fontSize: 14,
+      marginBottom: 8
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8
+    },
+    statusIndicator: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: 8
+    },
+    earningsText: {
+      fontSize: 16,
+      fontWeight: 'bold'
+    },
+    toggleButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    toggleButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold'
+    },
+    offlineMessage: {
+      padding: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    offlineText: {
+      fontSize: 16,
+      marginTop: 16,
+      textAlign: 'center'
+    },
+    deliveryCard: {
+      padding: 20,
+      borderRadius: 12,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3
+    },
+    deliveryInfo: {
+      marginBottom: 16
+    },
+    deliveryMerchant: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 8
+    },
+    deliveryCustomer: {
+      fontSize: 14,
+      marginBottom: 12
+    },
+    deliveryMeta: {
+      flexDirection: 'row',
+      gap: 20
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4
+    },
+    metaText: {
+      fontSize: 14
+    },
+    acceptDeliveryButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: 'center'
+    },
+    acceptDeliveryText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: 'bold'
+    }
+  });
+  // @end:styles
+
+  // @section:return @depends:[ThemeProvider,MainApp]
+  return React.createElement(ThemeProvider, null,
+    React.createElement(View, { style: { flex: 1, width: '100%', height: '100%' } },
+      React.createElement(StatusBar, { barStyle: 'dark-content' }),
+      React.createElement(MainApp)
+    )
+  );
+  // @end:return
+};
+return ComponentFunction;
